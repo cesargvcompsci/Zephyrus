@@ -18,23 +18,32 @@ def cluster_by_distance(centers, distance_threshold):
         distance_threshold: float, maximum distance between cluster points
 
     Returns:
-        cluster_labels: array of shape (n,) labels each point with a number from 1 to m.
-        num_clusters: number of clusters'''
+        cluster_labels: array of shape (n,) labels each point with a number from 0 to m.
+        num_clusters: number of clusters
+        cluster_centers'''
 
     n = centers.shape[0] # number of points
     m = 0 # number of clusters so far
-    cluster_labels = np.zeros(n,dtype=np.int16)
+    cluster_labels = np.full(n,-1,dtype=np.int16)
     for i in range(n):
         # If not already in a cluster, make a new one
-        if cluster_labels[i] == 0:
-            m += 1
+        if cluster_labels[i] == -1:
             cluster_labels[i] = m
+            m += 1
+
         # Add nearby points to this points cluster
         for j in range(i+1, n):
             if np.linalg.norm(centers[i]-centers[j]) <= distance_threshold:
                 cluster_labels[j] = cluster_labels[i]
-    
-    return (cluster_labels, m)
+
+    cluster_centers = np.zeros((m,2))
+    for c in range(m):
+        # Take all points in cluster c and average each coordinate
+        cluster_centers[c] = np.average(centers[cluster_labels==c], axis=0)
+
+    return (cluster_labels, m, cluster_centers)
+
+
 
 if __name__ == "__main__":
     hog = cv.HOGDescriptor()
@@ -48,14 +57,17 @@ if __name__ == "__main__":
 
     boxes, weights = hog.detectMultiScale(img, winStride=(8,8))
 
-    cluster_labels, m = cluster_by_distance(box_centers(boxes), 150)
+    cluster_labels, m, cluster_centers = cluster_by_distance(box_centers(boxes), 150)
     print("Number of clusters:", m)
 
     # Generate m different colors for testing
     colors_list = np.random.randint(25,255,(m,3))
 
     for ((x, y, w, h), cluster) in zip(boxes, cluster_labels):
-        cv.rectangle(img, (x, y, w, h), colors_list[cluster-1].tolist(), 2)
+        cv.rectangle(img, (x, y, w, h), colors_list[cluster].tolist(), 2)
+
+    for c, center in enumerate(cluster_centers):
+        cv.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
 
     #display frame
     cv.imshow('frame', img)

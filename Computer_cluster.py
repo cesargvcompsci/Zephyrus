@@ -33,14 +33,17 @@ while True:
     #print(classIds,bbox)
 
     if len(classIds) != 0:
-        cluster_labels, m = cluster_by_distance(box_centers(bbox), 150)
+        cluster_labels, m, cluster_centers = cluster_by_distance(box_centers(bbox), 150)
         print("Number of clusters:", m)
 
         for classId, confidence,box, cluster in zip(classIds.flatten(),confs.flatten(),bbox,cluster_labels):
             if True:#classId == 1:
-                cv2.rectangle(img,box,color=colors_list[cluster-1].tolist(),thickness=2)
+                cv2.rectangle(img,box,color=colors_list[cluster].tolist(),thickness=2)
                 cv2.putText(img,classNames[classId-1].upper(),(box[0]+10,box[1]+30),
                 cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+
+                for c, center in enumerate(cluster_centers):
+                    cv2.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
     imS = cv2.resize(img,(960, 540))
     cv2.imshow('Output',imS)
     if cv2.waitKey(5) == ord('q'):
