@@ -33,7 +33,7 @@ cv.waitKey(0)
 boxes, weights = hog.detectMultiScale(pano, winStride=(8,8))
 
 for (x, y, w, h) in boxes:
-    cv.rectangle(pano, (x, y), (x+w, y+h), (0,255,0), 2)
+    cv.rectangle(pano, (x, y, w, h), (0,255,0), 2)
 
 #display frame
 cv.imshow('frame', pano)
