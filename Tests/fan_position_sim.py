@@ -22,12 +22,12 @@ class Fan_Simulation:
         self.position = start_pos
         self.movement = 0
         self.oscillating = False
+        self.ticks = 0
 
     def init_oscillation(self,ccounts):
         '''Register the amount of time the fan will follow each cluster center'''
         # For this sim, follow a cluster with n people for 1+0.5n seconds
-        self.ticks = 0
-        self.follow_times = (ccounts*0.5 + 1) * 1000
+        self.follow_times = (ccounts*0.5 + 1) * 200
         self.current_track = 0
 
         self.oscillating = True
@@ -40,13 +40,14 @@ class Fan_Simulation:
         '''
 
         if len(centers)==0:
-            pass
+            self.rotate_stop
         elif self.oscillating:
             if self.ticks > self.follow_times[self.current_track]:
                 self.current_track += 1
+                self.ticks = 0
 
-            if self.current_track > len(centers):
-                            self.current_track = 0
+            if self.current_track >= len(centers):
+                self.current_track = 0
 
             # If fan not aligned with the cluster center it's currently following, move it
             if self.position - centers[self.current_track, 0] > 1:

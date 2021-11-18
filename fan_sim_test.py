@@ -22,8 +22,10 @@ class Trackers:
         success = np.zeros(len(self.trackers))
         bboxes = self.bboxes
         for i,tracker in enumerate(self.trackers):
-            success[i], bboxes[i] = tracker.update(frame)
-        
+            success[i], new_bbox = tracker.update(frame)
+            if success[i]:
+                bboxes[i] = new_bbox
+
         return success, bboxes
 
 
@@ -60,7 +62,7 @@ while True:
     trackers = Trackers(img, bbox[classIds==1]) #All boxes with humans
 
     if len(classIds) != 0:
-        clabels, m, ccenters, cboxes = cluster_boxes(bbox, 150)
+        clabels, m, ccenters, cboxes = cluster_boxes(bbox, 10)
 
         for classId, confidence,box, cluster in zip(classIds.flatten(),confs.flatten(),bbox,clabels):
             if classId == 1:
@@ -79,12 +81,12 @@ while True:
         ccounts[c] += 1
     Fan_sim.init_oscillation(ccounts)
 
-    # Track for 2000 frames = 5ms*1000 = 10 seconds
-    for f in range(2000):
+    # Track for n frames
+    for f in range(15):
         success,img = cap.read()
         
         track_successes, bbox = trackers.update(img)
-        clabels, m, ccenters, cboxes = cluster_boxes(bbox, 150)
+        clabels, m, ccenters, cboxes = cluster_boxes(bbox, 10)
 
         for classId, confidence,box, cluster in zip(classIds.flatten(),confs.flatten(),bbox,clabels):
             if classId == 1:
@@ -92,11 +94,15 @@ while True:
                 cv2.putText(img,classNames[classId-1].upper()+" (TRACKING)",(box[0]+10,box[1]+30),
                 cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
 
-                for c, center in enumerate(ccenters):
-                    cv2.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
+            for (x,y,w,h) in cboxes:
+                cv2.rectangle(img, (x, y, w, h), (0,0,0), 1)
+
+            for c, center in enumerate(ccenters):
+                cv2.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
         
         Fan_sim.update_movement(ccenters, 5)
         cv2.circle(img, (Fan_sim.position, 270), 25, (0,255,255), 2)
+        cv2.circle(img, (Fan_sim.position, 270), 23, colors_list[Fan_sim.current_track].tolist(), 2)
 
         imS = cv2.resize(img,(960, 540))
         cv2.imshow('Output',imS)
