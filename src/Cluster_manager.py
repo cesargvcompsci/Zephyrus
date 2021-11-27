@@ -19,8 +19,10 @@ def cluster_boxes(boxes, distance_threshold, max_width=None):
         max_width: integer or None, split clusters if box size larger than this width, or do nothing if None.
     Returns:
         cluster_labels: array of shape (n,) labels each point with a number from 0 to m.
-        num_clusters: number of clusters
-        cluster_centers'''
+        num_clusters: int, number of clusters
+        cluster_centers: array of shape (n,2), the center points (x,y) of each cluster
+        cluster_boxes: array of shape(n,4), the bounding boxes (x,y,w,h) of each cluster
+    '''
 
     centers = box_centers(boxes)
     n = centers.shape[0] # number of points
@@ -38,7 +40,7 @@ def cluster_boxes(boxes, distance_threshold, max_width=None):
                 cluster_labels[j] = cluster_labels[i]
             # alternatively, if the boxes overlap:
             elif boxes[i,0] >= boxes[j,0] and boxes[i,0]-boxes[j,0] <= boxes[j,2] \
-                or boxes[j,0] >= boxes[i,0] >= 0 and boxes[i,0]-boxes[j,0] <= boxes[j,2]:
+                or boxes[j,0] >= boxes[i,0] and boxes[j,0]-boxes[i,0] <= boxes[i,2]:
                 cluster_labels[j] = cluster_labels[i]
 
     #Give boxes of clusters
@@ -89,37 +91,25 @@ def cluster_boxes(boxes, distance_threshold, max_width=None):
 
     return cluster_labels, m, cluster_centers, cluster_boxes
 
-if __name__ == "__main__":
-    # test the module
-    hog = cv.HOGDescriptor()
-    hog.setSVMDetector(cv.HOGDescriptor_getDefaultPeopleDetector())
+class Cluster_manager:
+    '''Manages clusters and allocates time for each fan to them
+    
+    Attributes:
+        labels: array of shape (n,) labels each point with a number from 0 to m.
+        m: int, number of clusters
+        centers: array of shape (n,2), the center points (x,y) of each cluster
+        boxes: array of shape(n,4), the bounding boxes (x,y,w,h) of each cluster
+    
+    '''
+    
+    def __init__(self, distance_threshold, max_width=None):
+        self.distance_threshold = distance_threshold
+        self.max_width = max_width
 
-    img = cv.imread("group.jpg")
-    img = imutils.resize(img, width=img.shape[0]//4)
+    def update(self, boxes):
+        self.labels, self.m, self.centers, self.boxes =  cluster_boxes(boxes, self.distance_threshold, self.max_width)
 
-    #cv.imshow('pano', pano)
-    cv.waitKey(0)
-
-    boxes, weights = hog.detectMultiScale(img, winStride=(8,8))
-
-    clabels, m, ccenters, cboxes = cluster_boxes(boxes, 1000, 20)
-    print("Number of clusters:", m)
-
-    # Generate m different colors for testing
-    colors_list = np.random.randint(25,255,(m,3))
-
-    for ((x, y, w, h), cluster) in zip(boxes, clabels):
-        cv.rectangle(img, (x, y, w, h), colors_list[cluster].tolist(), 2)
-
-    for (x,y,w,h) in cboxes:
-        cv.rectangle(img, (x, y, w, h), (0,0,0), 1)
-
-    for c, center in enumerate(ccenters):
-        cv.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
-
-    #display frame
-    cv.imshow('frame', img)
-    #cv2.imwrite('test_img.jpg', pano)
-    cv.waitKey(0)
-
-    cv.destroyAllWindows()
+        # Count how many people are in each cluster
+        self.counts = np.zeros(self.m)
+        for c in self.labels:
+            self.counts[c] += 1
