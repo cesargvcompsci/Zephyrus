@@ -24,6 +24,7 @@ class Fan_Simulation:
             centers: cluster centers.
             ticks: number of ticks between each update. For timing purposes
         '''
+        ###TODO: modify for continuity of clusters
 
         if len(centers)==0:
             self._rotate_stop()

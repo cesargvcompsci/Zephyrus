@@ -39,8 +39,11 @@ tick = 0
 while True:
     success,img = cap.read()
     
-    if tick % 1000 == 0:
+    if tick % 8 == 0:
         classIds, confs, bbox = net.detect(img,confThreshold=thres)
+        # Keep boxes of people only, classIds == 1
+        if len(classIds) > 0:
+            bbox = bbox[classIds==1]
         trackers.begin_track(img, bbox)
     else:
         bbox = trackers.update(img)
@@ -48,19 +51,18 @@ while True:
     if len(bbox) != 0:
         cluster_m.update(bbox)
 
-        for classId, confidence,box, cluster in zip(classIds.flatten(),confs.flatten(),bbox,cluster_m.labels):
-            if classId == 1:
-                cv2.rectangle(img,box,color=colors_list[cluster].tolist(),thickness=2)
-                cv2.putText(img,classNames[classId-1].upper(),(box[0]+10,box[1]+30),
-                cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+        for boxID, box, cluster in zip(trackers.bboxes.keys(),trackers.bboxes.values(),cluster_m.labels):
+            cv2.rectangle(img, box,color=colors_list[cluster].tolist(),thickness=2)
+            cv2.putText(img, "Person {}".format(boxID), (box[0]+10,box[1]+30),
+                        cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
 
-                for c, center in enumerate(cluster_m.centers):
-                    cv2.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
+            for c, center in enumerate(cluster_m.centers):
+                cv2.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
 
     imS = cv2.resize(img,(960, 540))
     cv2.imshow('Output',imS)
 
-    # Initial test for the simulated fan's movement
+    # simulated fan's movement
     fan.update_oscillation(cluster_m.counts)
     fan.update_movement(cluster_m.centers, 5)
     cv2.circle(img, (fan.position, 270), 25, (0,255,255), 2)

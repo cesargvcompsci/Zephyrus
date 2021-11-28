@@ -4,6 +4,8 @@ import sys
 import numpy as np
 import imutils
 
+###TODO: Add continuity of clusters
+
 def box_centers(boxes):
     '''Args:
         boxes: array of [x,y,w,h], where (x,y) is the
