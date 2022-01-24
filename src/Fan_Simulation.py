@@ -13,24 +13,20 @@ class Fan_Simulation:
         self.ticks = 0
         self.current_track = 0
 
-    def update_oscillation(self,ccounts):
-        '''Register the amount of time the fan will follow each cluster center'''
-        # For this sim, follow a cluster with n people for 1+0.5n seconds
-        self.follow_times = (ccounts*0.5 + 1) * 200
-
-    def update_movement(self, centers, ticks):
+    def update_movement(self, ccounts, centers, ticks):
         '''Update the movement of the fan.
         Args:
             centers: cluster centers.
             ticks: number of ticks between each update. For timing purposes
         '''
         ###TODO: modify for continuity of clusters
+        self.follow_times = (ccounts*0.5 + 1) * 200
 
         if len(centers)==0:
             self._rotate_stop()
         else:
             if self.current_track >= len(centers):
-                pass
+                self.current_track = 0
 
             elif self.ticks > self.follow_times[self.current_track]:
                 self.current_track = (self.current_track+1) % len(centers)

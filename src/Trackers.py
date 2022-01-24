@@ -1,10 +1,8 @@
 import imutils
 import cv2
-#import dlib
 import numpy as np
-from math import ceil
 
-tracker_create = cv2.TrackerCSRT_create
+tracker_create = cv2.TrackerMIL_create
 
 def same_object(frame, A, B):
     '''Given two bounding boxes A and B, tuples [x,y,w,h],
@@ -17,23 +15,23 @@ def same_object(frame, A, B):
         return False
 
     # Do the images match?
-    
-    # Make sure coordinates are not zero
-    A = (max(0, A[0]), max(0, A[1]), A[2], A[3])
-    B = (max(0, B[0]), max(0, B[1]), B[2], B[3])
+    # Make sure coordinates are not out of bounds
+    A = [max(0, A[0]), max(0, A[1]), A[2], A[3]]
+    B = [max(0, B[0]), max(0, B[1]), A[2], A[3]]
+
     imgA = frame[A[1]:A[1]+A[3],A[0]:A[0]+A[2]]
     imgB = frame[B[1]:B[1]+B[3],B[0]:B[0]+B[2]]
-
     # Make imgA the smaller one
     if A[2]*A[3] > B[2]*B[3]:
         imgA,imgB = imgB,imgA
 
     # enforce imgA.height <= imgB.height and imgA.width <= imgB.width
     if imgA.shape[0] > imgB.shape[0]:
-        cut = ceil(imgA.shape[0] - imgB.shape[0])
+        # double negative sign gives "ceiling division"
+        cut = (-imgA.shape[0] + imgB.shape[0])//2 * -1
         imgA = imgA[cut:-cut, :]
     if imgA.shape[1] > imgB.shape[1]:
-        cut = ceil(imgA.shape[1] - imgB.shape[1])
+        cut = (-imgA.shape[1] + imgB.shape[1])//2 * -1
         imgA = imgA[:,cut:-cut]
     
     # Repurpose template matching for this
@@ -41,7 +39,7 @@ def same_object(frame, A, B):
     max_correlation = cv2.minMaxLoc(res)[1]
     print(max_correlation)
     
-    return max_correlation > 0.85
+    return max_correlation > 0.3
 
 class Trackers:
     '''A class to hold multiple trackers.
@@ -57,15 +55,15 @@ class Trackers:
         self.trackers = {}
         self.preserve = {} # For robustness to detection failing in one round
 
-    #TODO: Make tracking more robust to failure in 1 or 2 frames of object tracking
+    #@profile
     def begin_track(self, frame, bbox):
         '''Matches bboxes to current trackers or create new ones if not already tracked'''
         new_trackers = {}
         new_bboxes = {}
         for new_box in bbox:
-
             # 1) Items already being tracked
             for i, box in self.bboxes.items():
+                same_object(frame, box, new_box)
                 if i not in new_trackers and same_object(frame, box, new_box):
                     new_trackers[i] = tracker_create()
                     new_trackers[i].init(frame, new_box)

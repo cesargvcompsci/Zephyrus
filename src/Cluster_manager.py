@@ -91,7 +91,7 @@ def cluster_boxes(boxes, distance_threshold, max_width=None):
         # Take all points in cluster c and average each coordinate
         cluster_centers[c] = np.average(centers[cluster_labels==c], axis=0)
 
-    return cluster_labels, m, cluster_centers, cluster_boxes
+    return cluster_labels, m, cluster_centers
 
 class Cluster_manager:
     '''Manages clusters and allocates time for each fan to them
@@ -109,7 +109,7 @@ class Cluster_manager:
         self.max_width = max_width
 
     def update(self, boxes):
-        self.labels, self.m, self.centers, self.boxes =  cluster_boxes(boxes, self.distance_threshold, self.max_width)
+        self.labels, self.m, self.centers =  cluster_boxes(boxes, self.distance_threshold, self.max_width)
 
         # Count how many people are in each cluster
         self.counts = np.zeros(self.m)
