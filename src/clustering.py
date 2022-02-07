@@ -1,10 +1,5 @@
 import numpy as np
 import cv2 as cv
-import sys
-import numpy as np
-import imutils
-
-###TODO: Add continuity of clusters
 
 def box_centers(boxes):
     '''Args:
@@ -23,7 +18,6 @@ def cluster_boxes(boxes, distance_threshold, max_width=None):
         cluster_labels: array of shape (n,) labels each point with a number from 0 to m.
         num_clusters: int, number of clusters
         cluster_centers: array of shape (n,2), the center points (x,y) of each cluster
-        cluster_boxes: array of shape(n,4), the bounding boxes (x,y,w,h) of each cluster
     '''
 
     centers = box_centers(boxes)
@@ -93,7 +87,7 @@ def cluster_boxes(boxes, distance_threshold, max_width=None):
 
     return cluster_labels, m, cluster_centers
 
-class Cluster_manager:
+"""class Cluster_manager:
     '''Manages clusters and allocates time for each fan to them
     
     Attributes:
@@ -109,9 +103,5 @@ class Cluster_manager:
         self.max_width = max_width
 
     def update(self, boxes):
-        self.labels, self.m, self.centers =  cluster_boxes(boxes, self.distance_threshold, self.max_width)
-
-        # Count how many people are in each cluster
-        self.counts = np.zeros(self.m)
-        for c in self.labels:
-            self.counts[c] += 1
+        self.labels, self.m, self.centers =  cluster_boxes(boxes, self.distance_threshold, self.max_width)"""
+        

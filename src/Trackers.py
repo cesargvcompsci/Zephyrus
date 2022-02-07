@@ -1,8 +1,9 @@
-import imutils
 import cv2
 import numpy as np
 
-tracker_create = cv2.TrackerMIL_create
+from clustering import cluster_boxes
+
+tracker_create = cv2.TrackerCSRT_create
 
 def same_object(frame, A, B):
     '''Given two bounding boxes A and B, tuples [x,y,w,h],
@@ -39,74 +40,70 @@ def same_object(frame, A, B):
     max_correlation = cv2.minMaxLoc(res)[1]
     print(max_correlation)
     
-    return max_correlation > 0.3
+    return max_correlation > 0.15
 
 class Trackers:
-    '''A class to hold multiple trackers.
+    '''A class to hold multiple trackers and manage clusters.
 
     Attributes:
         trackers(dict{int, cv2.Tracker}): holds all Trackers, indexed by a specific ID
         bboxes (dict{int : numpy array of shape (4,)}): bboxes for each tracked object, indexed by ID
     '''
 
-    def __init__(self):
+    def __init__(self, cluster_dist_threshold):
         self._ID_count = 0 #Assign unique IDs to new objects
-        self.bboxes = {}
+        self.cluster_dist_threshold = cluster_dist_threshold
         self.trackers = {}
-        self.preserve = {} # For robustness to detection failing in one round
+        self.timer = {} # Contains 0:time_left and 1:preserve
+        self.bbox = {}
+
+    def del_tracker(self, t_id):
+        del self.trackers[t_id]
+        del self.timer[t_id]
+        del self.bbox[t_id]
 
     #@profile
-    def begin_track(self, frame, bbox):
+    def begin_track(self, frame, new_bbox):
         '''Matches bboxes to current trackers or create new ones if not already tracked'''
-        new_trackers = {}
-        new_bboxes = {}
-        for new_box in bbox:
-            # 1) Items already being tracked
-            for i, box in self.bboxes.items():
-                same_object(frame, box, new_box)
-                if i not in new_trackers and same_object(frame, box, new_box):
-                    new_trackers[i] = tracker_create()
-                    new_trackers[i].init(frame, new_box)
-                    new_bboxes[i] = new_box
-                    self.preserve[i] = True
+        n = len(new_bbox)
+        # Match up old trackers to bboxes
+        for t_id in list(self.trackers):
+            # iterate through new bboxes
+            for i in range(n):
+                if same_object(frame, self.bbox[t_id], new_bbox[i]):
+                    self.bbox[t_id] = new_bbox[i]
+                    new_bbox[i] = new_bbox[n-1]
+                    n -= 1
                     break
-            
-            # 2) New items with new ID, do if you do not 'break' from the for loop
+            # Can't find match for existing tracker, either preserve for another round or delete
             else:
-                new_trackers[self._ID_count] = tracker_create()
-                new_trackers[self._ID_count].init(frame, new_box)
-                new_bboxes[self._ID_count] = new_box
-                self.preserve[self._ID_count] = True
-                self._ID_count +=1
-        
-        # 3) Old items that failed to be detected are "safe" for one round
-        for i in list(self.preserve.keys()):
-            if i not in new_trackers:
-                if self.preserve[i]:
-                    new_trackers[i] = tracker_create()
-                    new_trackers[i].init(frame, self.bboxes[i])
-                    new_bboxes[i] = self.bboxes[i]
-                    self.preserve[i] = False
-                else:
-                    del self.preserve[i]
-        
-        self.trackers = new_trackers
-        self.bboxes = new_bboxes
+                if self.timer[t_id][1]:# == True
+                    self.timer[t_id][1] = False
+                else: #self.timer[t_id][preserve] == False
+                    self.del_tracker(t_id)
+
+        # Process remaining bboxes into new trackers
+        for i in range(n):
+            self.trackers[self._ID_count] = tracker_create()
+            self.trackers[self._ID_count].init(frame, new_bbox[i])
+            self.timer[self._ID_count] = [7, True] #[Time left=7, Preserve=True]
+            self.bbox[self._ID_count] = new_bbox[i]
+            self._ID_count += 1
 
     def update(self, frame):
         '''Updates current trackers'''
         
-        '''success = np.zeros(len(self.trackers))
-        bboxes = self.bboxes
-        for i,tracker in self.trackers.:
-            success[i], new_box = tracker.update(frame)
-            if success:
-                success[i], bboxes[i] = tracker.update(frame)
-
-        return bboxes'''
-        for ind, tracker in self.trackers.items():
+        for t_id, tracker in self.trackers.items():
             success, new_box = tracker.update(frame)
             if success:
-                self.bboxes[ind] = new_box
+                self.bbox[t_id] = new_box
  
-        return np.array(list(self.bboxes.values())).reshape(-1,4)
+        return np.array(list(self.bbox.values())).reshape(-1,4)
+
+    def cluster(self):
+        '''Returns tracker_ids, cluster_labels, m, and cluster_centers,
+        where tracker_ids and cluster_labels are parallel lists, m is the number of clusters,
+        and cluster_centers is the center of each cluster from 0 to m-1'''
+
+        ids, boxes = list(self.bbox.keys()), list(self.bbox.values())
+        return ids, *cluster_boxes(np.array(boxes), self.cluster_dist_threshold)

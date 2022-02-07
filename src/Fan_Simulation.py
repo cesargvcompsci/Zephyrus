@@ -1,47 +1,98 @@
-class Fan_Simulation:
-    '''Simulates the position of the fan for testing without hardware
-    
+"""Holds the tracking behavior for the fan"""
+
+#TODO: Change timer behavior to work on actual clock time rather than on ticks
+
+class Fan:
+    '''Manages the position of the fan
+
     Attributes:
         position: current x-position of fan
         movement: current x-velocity
         ticks: a timer for internal use
         current_track: cluster that's currently being tracked
     '''
-    def __init__(self, start_pos):
+    def __init__(self, start_pos, Trackers):
         self.position = start_pos
         self.movement = 0
         self.ticks = 0
-        self.current_track = 0
+        self.Trackers = Trackers
 
-    def update_movement(self, ccounts, centers, ticks):
+    def print_info(self):
+        '''For debugging'''
+        print(self.Trackers.timer)
+
+    def update_movement(self, track_ids, cluster_labels, m, centers, ticks):
         '''Update the movement of the fan.
         Args:
             centers: cluster centers.
             ticks: number of ticks between each update. For timing purposes
         '''
-        ###TODO: modify for continuity of clusters
-        self.follow_times = (ccounts*0.5 + 1) * 200
-
-        if len(centers)==0:
+        self.print_info()
+        # Exit the function if nothing to do
+        if len(track_ids) == 0:
             self._rotate_stop()
+            return None
+        
+        # Iterate through the currently tracked boxes and find the first one whose fan time is still > 0
+        for track_id, cluster_label in zip(track_ids, cluster_labels):
+            if self.Trackers.timer[track_id][0] > 0:
+                current_track = track_id
+                current_cluster = cluster_label
+                break
+        else: #If all tracked boxes have had their fan time, then reset all timers
+            # Timers stored in info[track_ids][0]
+            for track_id in track_ids:
+                    self.Trackers.timer[track_id][0] = 7
+            current_track = track_ids[0]
+            current_cluster = cluster_labels[0]
+
+        # Count down the timer for all trackers in the current cluster, but more slowly if there are more people in it
+        cluster_size = 0
+        for cl in cluster_labels:
+            if cl == current_cluster:
+                cluster_size += 1
+
+        for track_id, cluster in zip(track_ids, cluster_labels):
+            if cluster == current_cluster:
+                self.Trackers.timer[track_id][0] -= ticks * (0.5 + 0.5/cluster_size)
+
+        # If fan not aligned with the cluster center it's currently following, move it
+        if self.position - centers[current_cluster, 0] > 1:
+            self._rotate_left()
+        elif self.position - centers[current_cluster,0] < -1:
+            self._rotate_right()
         else:
-            if self.current_track >= len(centers):
-                self.current_track = 0
+            self._rotate_stop()
 
-            elif self.ticks > self.follow_times[self.current_track]:
-                self.current_track = (self.current_track+1) % len(centers)
-                self.ticks = 0
+        self.position += self.movement
+        self.ticks += ticks
 
-            # If fan not aligned with the cluster center it's currently following, move it
-            if self.position - centers[self.current_track, 0] > 1:
-                self._rotate_left()
-            elif self.position - centers[self.current_track,0] < -1:
-                self._rotate_right()
-            else:
-                self._rotate_stop()
+        return current_cluster
 
-            self.position += self.movement
-            self.ticks += ticks
+    def get_position(self):
+        raise NotImplementedError("Please instantiate Fan_Simulation or Fan_RPi")
+
+    def rotate_right(self):
+        '''Begin rotating the fan base to the right'''
+        raise NotImplementedError("Please instantiate Fan_Simulation or Fan_RPi")
+
+    def rotate_left(self):
+        '''Begin rotating the fan base to the left'''
+        raise NotImplementedError("Please instantiate Fan_Simulation or Fan_RPi")
+
+    def rotate_stop(self):
+        '''Stop angular rotation of the fan base'''
+        raise NotImplementedError("Please instantiate Fan_Simulation or Fan_RPi")
+
+class Fan_Simulation(Fan):
+    '''Simulates the position of the fan for testing without hardware'''
+
+    def __init__(self, start_pos, Trackers):
+        super().__init__(start_pos, Trackers)
+
+    def get_position(self):
+        '''Get the current x-position of where the fan is pointing at'''
+        return self.position
 
     def _rotate_right(self):
         '''Begin rotating the fan base to the right'''
@@ -55,24 +106,23 @@ class Fan_Simulation:
         '''Stop angular rotation of the fan base'''
         self.movement = 0
 
-class Fan:
-    '''Manages the position of the fan'''
-
-    def __init__():
-        self.position = self.get_position()
+class FanRPi(Fan):
+    '''Uses RPi.GPIO to control the physical fan'''
+    def __init__(self, start_pos, Trackers):
+        super().__init__(start_pos, Trackers)
 
     def get_position(self):
         '''Get the current x-position of where the fan is pointing at'''
         pass
 
-    def rotate_right(self):
+    def _rotate_right(self):
         '''Begin rotating the fan base to the right'''
         pass
 
-    def rotate_left(self):
+    def _rotate_left(self):
         '''Begin rotating the fan base to the left'''
         pass
 
-    def rotate_stop(self):
+    def _rotate_stop(self):
         '''Stop angular rotation of the fan base'''
         pass
