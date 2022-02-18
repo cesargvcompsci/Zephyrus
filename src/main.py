@@ -8,6 +8,7 @@ import numpy as np
 thres = 0.60 # Threshold to detect object
 
 from Fan_Simulation import Fan_Simulation
+from Double_fan import Double_Fan_Simulation
 from Trackers import Trackers
 
 WINDOW_WIDTH = 960
@@ -39,7 +40,7 @@ def main():
     colors_list = np.random.randint(25,255,(30,3))
 
     trackers = Trackers(200)
-    fan = Fan_Simulation(480, trackers)
+    fan = Double_Fan_Simulation(480, trackers)
 
     tick = 0
 
@@ -72,9 +73,14 @@ def main():
                     cv2.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
 
             # simulated fan's movement
-            current_cluster = fan.update_movement(track_ids, cluster_labels, m, cluster_centers, 1)
-        cv2.circle(img, (fan.position, 270), 25, (0,255,255), 2)
-        cv2.circle(img, (fan.position, 270), 23, colors_list[current_cluster].tolist(), 2)
+            A_cluster, B_cluster = fan.update_movement(track_ids, cluster_labels, m, cluster_centers, 1)
+
+            if A_cluster != None:
+                cv2.circle(img, (fan.A_pos, 200), 25, (0,255,255), 2)
+                cv2.circle(img, (fan.A_pos, 200), 23, colors_list[A_cluster].tolist(), 2)
+            if B_cluster != None:
+                cv2.circle(img, (fan.B_pos, 340), 25, (0,255,255), 2)
+                cv2.circle(img, (fan.B_pos, 340), 23, colors_list[B_cluster].tolist(), 2)
 
         #imS = cv2.resize(img,(960, 540))
         cv2.imshow('Output',img)
