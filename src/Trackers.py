@@ -106,4 +106,4 @@ class Trackers:
         and cluster_centers is the center of each cluster from 0 to m-1'''
 
         ids, boxes = list(self.bbox.keys()), list(self.bbox.values())
-        return ids, *cluster_boxes(np.array(boxes), self.cluster_dist_threshold)
+        return [ids] + list(cluster_boxes(np.array(boxes), self.cluster_dist_threshold))
