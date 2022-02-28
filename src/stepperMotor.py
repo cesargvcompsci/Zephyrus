@@ -12,7 +12,7 @@ GPIO.setup(out1,GPIO.OUT)
 GPIO.setup(out2,GPIO.OUT)
 GPIO.setup(out3,GPIO.OUT)
 GPIO.setup(out4,GPIO.OUT)
-sleep = 0.001
+sleep = 0.01
 class Stepper:
     def __init__(self):
         self.i=0
