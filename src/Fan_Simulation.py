@@ -16,6 +16,8 @@ class Fan:
         self.movement = 0
         self.ticks = 0
         self.Trackers = Trackers
+        self.timer = -1
+        self.current_track = None
 
     def print_info(self):
         '''For debugging'''
@@ -33,28 +35,29 @@ class Fan:
             self._rotate_stop()
             return None
         
-        # Iterate through the currently tracked boxes and find the first one whose fan time is still > 0
-        for track_id, cluster_label in zip(track_ids, cluster_labels):
-            if self.Trackers.timer[track_id][0] > 0:
-                current_track = track_id
-                current_cluster = cluster_label
-                break
-        else: #If all tracked boxes have had their fan time, then reset all timers
-            # Timers stored in info[track_ids][0]
-            for track_id in track_ids:
-                    self.Trackers.timer[track_id][0] = 7
-            current_track = track_ids[0]
-            current_cluster = cluster_labels[0]
+        # New, faster algo: keep the timer in this func, count down for all in cluster when done
+        if self.timer <= 0:
+            # Set timers of trackers in same cluster to 0
+            if not self.current_track is None:
+                id_to_cluster = dict(zip(track_ids, cluster_labels))
+                current_cluster = id_to_cluster[self.current_track]
+                for track_id, cluster in id_to_cluster.items():
+                    if cluster == current_cluster:
+                        self.Trackers.timer[track_id][0] = 0
+            # Iterate through the currently tracked boxes and find the first one whose fan time is still > 0
+            for track_id, cluster_label in zip(track_ids, cluster_labels):
+                if self.Trackers.timer[track_id][0] > 0:
+                    self.current_track = track_id
+                    current_cluster = cluster_label
+                    break
+            else: #If all tracked boxes have had their fan time, then reset all timers
+                # Timers stored in info[track_ids][0]
+                for track_id in track_ids:
+                        self.Trackers.timer[track_id][0] = 7
+                self.current_track = track_ids[0]
+                current_cluster = cluster_labels[0]
 
-        # Count down the timer for all trackers in the current cluster, but more slowly if there are more people in it
-        cluster_size = 0
-        for cl in cluster_labels:
-            if cl == current_cluster:
-                cluster_size += 1
-
-        for track_id, cluster in zip(track_ids, cluster_labels):
-            if cluster == current_cluster:
-                self.Trackers.timer[track_id][0] -= ticks * (0.5 + 0.5/cluster_size)
+        self.timer -= 0.5
 
         # If fan not aligned with the cluster center it's currently following, move it
         if self.position - centers[current_cluster, 0] > 1:
