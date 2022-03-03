@@ -1,5 +1,5 @@
 """Holds the tracking behavior for the fan"""
-
+from stepperMotor import Stepper
 #TODO: Change timer behavior to work on actual clock time rather than on ticks
 
 class Fan:
@@ -29,7 +29,7 @@ class Fan:
             centers: cluster centers.
             ticks: number of ticks between each update. For timing purposes
         '''
-        self.print_info()
+        #self.print_info()
         # Exit the function if nothing to do
         if len(track_ids) == 0:
             self._rotate_stop()
@@ -113,19 +113,27 @@ class FanRPi(Fan):
     '''Uses RPi.GPIO to control the physical fan'''
     def __init__(self, start_pos, Trackers):
         super().__init__(start_pos, Trackers)
+        self.movement = 0
+        self.stepper = Stepper()
 
     def get_position(self):
         '''Get the current x-position of where the fan is pointing at'''
-        pass
+        return self.position
 
     def _rotate_right(self):
         '''Begin rotating the fan base to the right'''
-        pass
-
+        if self.position < 960:
+            self.position+=5.4*20
+            self.stepper.move(20)
+            #take one stepper motor step
+            
     def _rotate_left(self):
         '''Begin rotating the fan base to the left'''
-        pass
-
+        if self.position > 0:
+            self.position-=5.4*20
+            self.stepper.move(-20)
+            #take one stepper motor step
+            
     def _rotate_stop(self):
         '''Stop angular rotation of the fan base'''
         pass
