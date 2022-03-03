@@ -63,7 +63,7 @@ def main():
         if len(bbox) != 0:
             track_ids, cluster_labels, m, cluster_centers = trackers.cluster()
 
-            for boxID, box, cluster in zip(trackers.bbox.keys(),trackers.bbox.values(),cluster_labels):
+            for boxID, box, cluster in zip(trackers.bboxes.keys(),trackers.bboxes.values(),cluster_labels):
                 cv2.rectangle(img, box,color=colors_list[cluster].tolist(),thickness=2)
                 cv2.putText(img, "Person {}".format(boxID), (box[0]+10,box[1]+30),
                             cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
