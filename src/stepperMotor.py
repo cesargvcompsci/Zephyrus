@@ -13,6 +13,13 @@ GPIO.setup(out2,GPIO.OUT)
 GPIO.setup(out3,GPIO.OUT)
 GPIO.setup(out4,GPIO.OUT)
 sleep = 0.01
+
+def set_all_low():
+    GPIO.output(out1,GPIO.LOW)
+    GPIO.output(out2,GPIO.LOW)
+    GPIO.output(out3,GPIO.LOW)
+    GPIO.output(out4,GPIO.LOW)
+
 class Stepper:
     def __init__(self):
         self.i=0

@@ -9,7 +9,7 @@ thres = 0.60 # Threshold to detect object
 
 from Fan_Simulation import Fan_Simulation, FanRPi
 from Trackers import Trackers
-
+from stepperMotor import set_all_low
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 540
 
@@ -39,7 +39,7 @@ def main():
     colors_list = np.random.randint(25,255,(30,3))
 
     trackers = Trackers(200)
-    fan = FanRPi(480, trackers)
+    fan = Fan_Simulation(480, trackers)
 
     tick = 0
 
@@ -97,7 +97,8 @@ def main():
         #if (tick==10):
         #    break
         #print(time.time()-start)
-
+    
+    set_all_low()
     cap.release()
     cv2.destroyAllWindows()
 

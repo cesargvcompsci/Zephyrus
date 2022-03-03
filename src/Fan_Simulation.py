@@ -29,7 +29,7 @@ class Fan:
             centers: cluster centers.
             ticks: number of ticks between each update. For timing purposes
         '''
-        #self.print_info()
+        print(self.timer)
         # Exit the function if nothing to do
         if len(track_ids) == 0:
             self._rotate_stop()
@@ -60,9 +60,9 @@ class Fan:
         self.timer -= 0.5
 
         # If fan not aligned with the cluster center it's currently following, move it
-        if self.position - centers[current_cluster, 0] > 1:
+        if self.position - centers[current_cluster, 0] > 20:
             self._rotate_left()
-        elif self.position - centers[current_cluster,0] < -1:
+        elif self.position - centers[current_cluster,0] < -20:
             self._rotate_right()
         else:
             self._rotate_stop()

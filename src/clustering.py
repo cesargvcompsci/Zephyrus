@@ -35,9 +35,9 @@ def cluster_boxes(boxes, distance_threshold, max_width=None):
             if np.linalg.norm(centers[i]-centers[j]) <= distance_threshold:
                 cluster_labels[j] = cluster_labels[i]
             # alternatively, if the boxes overlap:
-            elif boxes[i,0] >= boxes[j,0] and boxes[i,0]-boxes[j,0] <= boxes[j,2] \
+            '''elif boxes[i,0] >= boxes[j,0] and boxes[i,0]-boxes[j,0] <= boxes[j,2] \
                 or boxes[j,0] >= boxes[i,0] and boxes[j,0]-boxes[i,0] <= boxes[i,2]:
-                cluster_labels[j] = cluster_labels[i]
+                cluster_labels[j] = cluster_labels[i]'''
 
     #Give boxes of clusters
     cluster_boxes = np.zeros((m,4),dtype=np.int16)
