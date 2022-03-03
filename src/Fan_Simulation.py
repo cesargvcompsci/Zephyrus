@@ -35,30 +35,38 @@ class Fan:
             self._rotate_stop()
             return None
         
+        id_to_cluster = dict(zip(track_ids, cluster_labels))
+        try:
+            current_cluster = id_to_cluster[self.current_track]
+        except:
+            self.timer = 0
         # New, faster algo: keep the timer in this func, count down for all in cluster when done
         if self.timer <= 0:
             # Set timers of trackers in same cluster to 0
             if not self.current_track is None:
-                id_to_cluster = dict(zip(track_ids, cluster_labels))
-                current_cluster = id_to_cluster[self.current_track]
-                for track_id, cluster in id_to_cluster.items():
-                    if cluster == current_cluster:
-                        self.Trackers.timer[track_id][0] = 0
+                try:
+                    current_cluster = id_to_cluster[self.current_track]
+                    for track_id, cluster in id_to_cluster.items():
+                        if cluster == current_cluster:
+                            self.Trackers.timer[track_id] = 0
+                except:
+                    pass
             # Iterate through the currently tracked boxes and find the first one whose fan time is still > 0
             for track_id, cluster_label in zip(track_ids, cluster_labels):
-                if self.Trackers.timer[track_id][0] > 0:
+                if self.Trackers.timer[track_id] > 0:
                     self.current_track = track_id
                     current_cluster = cluster_label
                     break
             else: #If all tracked boxes have had their fan time, then reset all timers
                 # Timers stored in info[track_ids][0]
                 for track_id in track_ids:
-                        self.Trackers.timer[track_id][0] = 7
+                        self.Trackers.timer[track_id] = 7
                 self.current_track = track_ids[0]
                 current_cluster = cluster_labels[0]
-
+            self.timer = 5
+            
         self.timer -= 0.5
-
+        
         # If fan not aligned with the cluster center it's currently following, move it
         if self.position - centers[current_cluster, 0] > 20:
             self._rotate_left()
@@ -123,15 +131,15 @@ class FanRPi(Fan):
     def _rotate_right(self):
         '''Begin rotating the fan base to the right'''
         if self.position < 960:
-            self.position+=5.4*20
-            self.stepper.move(20)
+            self.position+=5.4*10
+            self.stepper.move(10)
             #take one stepper motor step
             
     def _rotate_left(self):
         '''Begin rotating the fan base to the left'''
         if self.position > 0:
-            self.position-=5.4*20
-            self.stepper.move(-20)
+            self.position-=5.4*10
+            self.stepper.move(-10)
             #take one stepper motor step
             
     def _rotate_stop(self):

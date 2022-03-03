@@ -3,7 +3,7 @@ import numpy as np
 
 from clustering import cluster_boxes
 
-tracker_create = cv2.TrackerCSRT_create
+tracker_create = cv2.TrackerMIL_create
 
 def same_object(frame, A, B):
     '''Given two bounding boxes A and B, tuples [x,y,w,h],
@@ -43,24 +43,17 @@ def same_object(frame, A, B):
     return max_correlation > 0.15
 
 class Trackers:
-    '''A class to hold multiple trackers and manage clusters.
-
-    Attributes:
-        trackers(dict{int, cv2.Tracker}): holds all Trackers, indexed by a specific ID
-        bboxes (dict{int : numpy array of shape (4,)}): bboxes for each tracked object, indexed by ID
-    '''
-    class Trackers:
     '''A class to hold multiple trackers.
 
     Attributes:
         trackers(dict{int, cv2.Tracker}): holds all Trackers, indexed by a specific ID
-        bboxes (dict{int : numpy array of shape (4,)}): bboxes for each tracked object, indexed by ID
-    '''
+        bboxes (dict{int : numpy array of shape (4,)}): bboxes for each tracked object, indexed by ID'''
 
     def __init__(self, cluster_dist_threshold):
         self._ID_count = 0 #Assign unique IDs to new objects
         self.cluster_dist_threshold = cluster_dist_threshold
         self.bboxes = {}
+        self.timer = {}
         self.trackers = {}
         self.preserve = {} # For robustness to detection failing in one round
 
@@ -85,6 +78,7 @@ class Trackers:
                 new_trackers[self._ID_count] = tracker_create()
                 new_trackers[self._ID_count].init(frame, new_box)
                 new_bboxes[self._ID_count] = new_box
+                self.timer[self._ID_count] = 7
                 self.preserve[self._ID_count] = True
                 self._ID_count +=1
         
@@ -98,6 +92,7 @@ class Trackers:
                     self.preserve[i] = False
                 else:
                     del self.preserve[i]
+                    del self.timer[i]
         
         self.trackers = new_trackers
         self.bboxes = new_bboxes

@@ -5,8 +5,9 @@ import cv2
 import time
 import numpy as np
 
-thres = 0.60 # Threshold to detect object
+thres = 0.55 # Threshold to detect object
 
+from clustering import cluster_boxes
 from Fan_Simulation import Fan_Simulation, FanRPi
 from Trackers import Trackers
 from stepperMotor import set_all_low
@@ -39,7 +40,7 @@ def main():
     colors_list = np.random.randint(25,255,(30,3))
 
     trackers = Trackers(200)
-    fan = Fan_Simulation(480, trackers)
+    fan = FanRPi(480, trackers)
 
     tick = 0
 
@@ -61,7 +62,8 @@ def main():
             bbox = trackers.update(img)
         
         if len(bbox) != 0:
-            track_ids, cluster_labels, m, cluster_centers = trackers.cluster()
+            track_ids = list(trackers.bboxes.keys())
+            cluster_labels, m, cluster_centers = cluster_boxes(np.array(list(trackers.bboxes.values())),trackers.cluster_dist_threshold)
 
             for boxID, box, cluster in zip(trackers.bboxes.keys(),trackers.bboxes.values(),cluster_labels):
                 cv2.rectangle(img, box,color=colors_list[cluster].tolist(),thickness=2)
@@ -76,7 +78,6 @@ def main():
             cv2.circle(img, (int(fan.position), 270), 25, (0,255,255), 2)
             cv2.circle(img, (int(fan.position), 270), 23, colors_list[current_cluster].tolist(), 2)
             '''A_cluster, B_cluster = fan.update_movement(track_ids, cluster_labels, m, cluster_centers, 1)
-
             if A_cluster != None:
                 cv2.circle(img, (fan.A_pos, 200), 25, (0,255,255), 2)
                 cv2.circle(img, (fan.A_pos, 200), 23, colors_list[A_cluster].tolist(), 2)
