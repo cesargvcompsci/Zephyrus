@@ -9,8 +9,9 @@ thres = 0.55 # Threshold to detect object
 
 from clustering import cluster_boxes
 from Fan_Simulation import Fan_Simulation, FanRPi
+from Double_fan import Double_Fan_Simulation
 from Trackers import Trackers
-from stepperMotor import set_all_low
+#from stepperMotor import set_all_low
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 540
 
@@ -40,7 +41,7 @@ def main():
     colors_list = np.random.randint(25,255,(30,3))
 
     trackers = Trackers(200)
-    fan = FanRPi(480, trackers)
+    fan = Double_Fan_Simulation(480, trackers)
 
     tick = 0
 
@@ -55,10 +56,8 @@ def main():
             if len(classIds) > 0:
                 bbox=bbox.astype(np.int16)
                 bbox = bbox[classIds==1]
-            #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             trackers.begin_track(img, bbox)
         else:
-            #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             bbox = trackers.update(img)
         
         if len(bbox) != 0:
@@ -74,18 +73,19 @@ def main():
                     cv2.circle(img, center.astype(np.int16), 5, colors_list[c].tolist(), -1)
 
             # simulated fan's movement
+            '''
             current_cluster = fan.update_movement(track_ids, cluster_labels, m, cluster_centers, 1)
             cv2.circle(img, (int(fan.position), 270), 25, (0,255,255), 2)
             cv2.circle(img, (int(fan.position), 270), 23, colors_list[current_cluster].tolist(), 2)
-            '''A_cluster, B_cluster = fan.update_movement(track_ids, cluster_labels, m, cluster_centers, 1)
+            '''
+            A_cluster, B_cluster = fan.update_movement(track_ids, cluster_labels, m, cluster_centers, 1)
             if A_cluster != None:
                 cv2.circle(img, (fan.A_pos, 200), 25, (0,255,255), 2)
                 cv2.circle(img, (fan.A_pos, 200), 23, colors_list[A_cluster].tolist(), 2)
             if B_cluster != None:
                 cv2.circle(img, (fan.B_pos, 340), 25, (0,255,255), 2)
-                cv2.circle(img, (fan.B_pos, 340), 23, colors_list[B_cluster].tolist(), 2)'''
+                cv2.circle(img, (fan.B_pos, 340), 23, colors_list[B_cluster].tolist(), 2)
 
-        #imS = cv2.resize(img,(960, 540))
         cv2.imshow('Output',img)
         
         key_press = cv2.waitKey(5)
@@ -99,7 +99,7 @@ def main():
         #    break
         #print(time.time()-start)
     
-    set_all_low()
+    #set_all_low()
     cap.release()
     cv2.destroyAllWindows()
 

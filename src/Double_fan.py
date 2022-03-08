@@ -18,6 +18,8 @@ class Double_Fan:
         self.B_move = 0
         self.ticks = 0
         self.Trackers = Trackers
+        self.A_timer = -1
+        self.B_timer = -1
         self.A_target = None
         self.B_target = None
 
@@ -31,105 +33,100 @@ class Double_Fan:
             centers: cluster centers.
             ticks: number of ticks between each update. For timing purposes
         '''
-        self.print_info()
-
-        A_cluster = None
-        B_cluster = None
         # Exit the function if nothing to do
         if len(track_ids) == 0:
-            self.A_stop()
-            self.B_stop()
+            self._rotate_stop()
             return None
         
-        # If already have a target, find the cluster label
-        if self.A_target != None:
+        id_to_cluster = dict(zip(track_ids, cluster_labels))
+        A_cluster = id_to_cluster.get(self.A_target,-1)
+        B_cluster = id_to_cluster.get(self.B_target,-1)
+        if centers.shape[0] > 1 and B_cluster == A_cluster:
+            B_cluster = -1
+        
+        # New, faster algo: keep the timer in this func, count down for all in cluster when done
+        if self.A_timer <= 0 or A_cluster == -1:
+            # Set timers of trackers in same cluster to 0
+            if A_cluster != -1:
+                try:
+                    A_cluster = id_to_cluster[self.A_target]
+                    for track_id, cluster in id_to_cluster.items():
+                        if cluster == A_cluster:
+                            self.Trackers.timer[track_id] = 0
+                except:
+                    pass
+            # Iterate through the currently tracked boxes and find the first one whose fan time is still > 0
             for track_id, cluster_label in zip(track_ids, cluster_labels):
-                if track_id == self.A_target:
-                    A_cluster = cluster_label
-                    break
-            else:
-                self.A_target = None
-        #If no target, find one: iterate through the tracked boxes and find a fan whose timer is > 0
-        if self.A_target == None:
-            for track_id, cluster_label in zip(track_ids, cluster_labels):
-                if self.Trackers.timer[track_id][0] > 0 and track_id != self.B_target:
+                if self.Trackers.timer[track_id] > 0 and cluster_label != B_cluster:
                     self.A_target = track_id
                     A_cluster = cluster_label
                     break
-            #If 'break', then no tracked fans have time > 0, and reset the rest
-            else:
-                # Timers stored in info[track_ids][0]
+            else: #If all tracked boxes have had their fan time, then reset all timers
                 for track_id in track_ids:
-                        # Make sure not to mess with fan B
-                        if track_id != self.B_target:
-                            self.Trackers.timer[track_id][0] = 7
+                    self.Trackers.timer[track_id] = 7
+                # If more than 1 cluster, find the cluster not tracked by B
+                if centers.shape[0] > 1:
+                    i = 0
+                    while cluster_labels[i] == B_cluster:
+                        i += 1
+                    self.A_target = track_ids[i]
+                    A_cluster = cluster_labels[i]
+                else:
+                    self.A_target = track_ids[0]
+                    A_cluster = cluster_labels[0]  
+            self.A_timer = 5.5
         
-        #Repeat for Fan B
-        if self.B_target != None:
+        # Repeat for fan B    
+        if self.B_timer <= 0 or B_cluster == -1:
+            # Set timers of trackers in same cluster to 0
+            if B_cluster != -1:
+                try:
+                    B_cluster = id_to_cluster[self.B_target]
+                    for track_id, cluster in id_to_cluster.items():
+                        if cluster == B_cluster:
+                            self.Trackers.timer[track_id] = 0
+                except:
+                    pass
+            # Iterate through the currently tracked boxes and find the first one whose fan time is still > 0
             for track_id, cluster_label in zip(track_ids, cluster_labels):
-                if track_id == self.B_target:
-                    B_cluster = cluster_label
-                    break
-            else:
-                self.B_target = None
-        #If no target, find one: iterate through the tracked boxes and find a fan whose timer is > 0
-        if self.B_target == None:
-            for track_id, cluster_label in zip(track_ids, cluster_labels):
-                if self.Trackers.timer[track_id][0] > 0 and track_id != self.A_target:
+                if self.Trackers.timer[track_id] > 0 and cluster_label != A_cluster:
                     self.B_target = track_id
                     B_cluster = cluster_label
                     break
-            #If 'break', then no tracked fans have time > 0, and reset the rest
-            else:
-                # Timers stored in info[track_ids][0]
+            else: #If all tracked boxes have had their fan time, then reset all timers
                 for track_id in track_ids:
-                        # Make sure not to mess with fan B
-                        if track_id != self.A_target:
-                            self.Trackers.timer[track_id][0] = 7
-            
-        # Count down the timer for all trackers in the current cluster, but more slowly if there are more people in it
-        A_cluster_size = 0
-        B_cluster_size = 0
-        for cl in cluster_labels:
-            if cl == A_cluster:
-                A_cluster_size += 1
-            elif cl == B_cluster:
-                B_cluster_size += 1
-            
-        for track_id, cluster in zip(track_ids, cluster_labels):
-            if cluster == A_cluster:
-                self.Trackers.timer[track_id][0] -= ticks * (0.5 + 0.5/A_cluster_size)
-            elif cluster == B_cluster:
-                self.Trackers.timer[track_id][0] -= ticks * (0.5 + 0.5/B_cluster_size)
-
-        # Stop following if currently tracked fans reach 0
-        # If fan not aligned with the cluster center it's currently following, move it
-        if self.A_target != None:
-            if self.Trackers.timer[self.A_target][0] <= 0:
-                self.A_target = None
-                self.A_stop()
-
-            elif self.get_A_pos() - centers[A_cluster, 0] > 1:
-                self.A_left()
-            elif self.get_A_pos() - centers[A_cluster,0] < -1:
-                self.A_right()
-            else:
-                self.A_stop()
+                    self.Trackers.timer[track_id] = 7
+                # If more than 1 cluster, find the cluster not tracked by B
+                if centers.shape[0] > 1:
+                    i = 0
+                    while cluster_labels[i] == A_cluster:
+                        i += 1
+                    self.B_target = track_ids[i]
+                    B_cluster = cluster_labels[i]
+                else:
+                    self.B_target = track_ids[0]
+                    B_cluster = cluster_labels[0]  
+            self.B_timer = 5.5
         
-        if self.B_target != None:
-            if self.Trackers.timer[self.B_target][0] <= 0:
-                self.B_target = None
-                self.B_stop()
-            elif self.get_B_pos() - centers[B_cluster, 0] > 1:
-                self.B_left()
-            elif self.get_B_pos() - centers[B_cluster,0] < -1:
-                self.B_right()
-            else:
-                self.B_stop()
+        self.A_timer -= 0.5
+        self.B_timer -= 0.5
+
+        # If fan not aligned with the cluster center it's currently following, move it
+        if self.A_pos - centers[A_cluster, 0] > 20:
+            self.A_left()
+        elif self.A_pos - centers[A_cluster,0] < -20:
+            self.A_right()
+        else:
+            self.A_stop()
+        if self.B_pos - centers[B_cluster, 0] > 20:
+            self.B_left()
+        elif self.B_pos - centers[B_cluster,0] < -20:
+            self.B_right()
+        else:
+            self.B_stop()
 
         self.A_pos += self.A_move
         self.B_pos += self.B_move
-        self.ticks += ticks
 
         return A_cluster, B_cluster
 
@@ -177,11 +174,11 @@ class Double_Fan_Simulation(Double_Fan):
 
     def A_right(self):
         '''Begin rotating the fan base to the right'''
-        self.A_move = 5
+        self.A_move = 10
 
     def A_left(self):
         '''Begin rotating the fan base to the left'''
-        self.A_move = -5
+        self.A_move = -10
 
     def A_stop(self):
         '''Stop the fan's rotation'''
@@ -193,11 +190,11 @@ class Double_Fan_Simulation(Double_Fan):
 
     def B_right(self):
         '''Begin rotating the fan base to the right'''
-        self.B_move = 5
+        self.B_move = 10
 
     def B_left(self):
         '''Begin rotating the fan base to the left'''
-        self.B_move = -5
+        self.B_move = -10
 
     def B_stop(self):
         '''Stop the fan's rotation'''

@@ -1,6 +1,5 @@
 """Holds the tracking behavior for the fan"""
-from stepperMotor import Stepper
-#TODO: Change timer behavior to work on actual clock time rather than on ticks
+#from stepperMotor import Stepper
 
 class Fan:
     '''Manages the position of the fan

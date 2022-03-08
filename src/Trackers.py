@@ -3,7 +3,7 @@ import numpy as np
 
 from clustering import cluster_boxes
 
-tracker_create = cv2.TrackerMIL_create
+tracker_create = cv2.TrackerKCF_create
 
 def same_object(frame, A, B):
     '''Given two bounding boxes A and B, tuples [x,y,w,h],
@@ -38,7 +38,6 @@ def same_object(frame, A, B):
     # Repurpose template matching for this
     res = cv2.matchTemplate(imgA, imgB, cv2.TM_CCOEFF_NORMED)
     max_correlation = cv2.minMaxLoc(res)[1]
-    print(max_correlation)
     
     return max_correlation > 0.15
 
